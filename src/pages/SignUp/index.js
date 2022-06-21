@@ -1,18 +1,23 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import logo from '../../assets/logo.png';
+import { AuthContext } from '../../contexts/auth';
 
 
 function SignUn() {
 
   const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
+  const [password, setPassword] = useState('');
   const [nome, setNome] = useState('');
   
+  const { cadastrar } = useContext(AuthContext); //coloca o que vai usar do AuthContext
 
   function handleSubmit(e){
     e.preventDefault();  //pra não atualizar a pagina
     
+    if(nome !== '' && password !== '' && email !== ''){
+      cadastrar(email, password, nome)
+    }
   }
     return (
       <div className='container'>
@@ -22,11 +27,11 @@ function SignUn() {
             <img src={logo} alt='logo do sistema'/>
           </div>
 
-          <form >
+          <form onSubmit={handleSubmit}>
             <h1>CADASTRO</h1>
             <input type='text' placeholder='Nome' value={nome} onChange={ (e) => setNome(e.target.value)}/>
             <input type='text' placeholder='email@email.com' value={email} onChange={ (e) => setEmail(e.target.value)}/>
-            <input type='password' placeholder='Senha' value={senha} onChange={ (e) => setSenha(e.target.value)}/>
+            <input type='password' placeholder='Senha' value={password} onChange={ (e) => setPassword(e.target.value)}/>
                         
             <button type='submit'>Cadastrar</button>
           </form>

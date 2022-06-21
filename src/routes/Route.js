@@ -7,10 +7,7 @@ export default function RouteWrapper({
     isPrivate,
     ...rest
 }){
-const { signed } = useContext(AuthContext); //coloca o que vai usar do AuthContext
-
-    const loading = false;
-    
+const { signed, loading } = useContext(AuthContext); //coloca o que vai usar do AuthContext
 
     if(loading){
         return(
