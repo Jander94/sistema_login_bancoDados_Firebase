@@ -10,7 +10,7 @@ function SignUn() {
   const [password, setPassword] = useState('');
   const [nome, setNome] = useState('');
   
-  const { cadastrar } = useContext(AuthContext); //coloca o que vai usar do AuthContext
+  const { cadastrar, loadingAuth } = useContext(AuthContext); //coloca o que vai usar do AuthContext
 
   function handleSubmit(e){
     e.preventDefault();  //pra não atualizar a pagina
@@ -33,7 +33,7 @@ function SignUn() {
             <input type='text' placeholder='email@email.com' value={email} onChange={ (e) => setEmail(e.target.value)}/>
             <input type='password' placeholder='Senha' value={password} onChange={ (e) => setPassword(e.target.value)}/>
                         
-            <button type='submit'>Cadastrar</button>
+            <button type='submit'>{loadingAuth ? 'Carregando...' : 'Cadastrar'}</button>
           </form>
 
           <Link to='/'>Já possuo uma conta</Link>

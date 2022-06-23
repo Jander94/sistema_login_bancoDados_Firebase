@@ -19,9 +19,30 @@ function AuthProvider({ children }){
             }
             setLoading(false);           
         }
-
         loadStorage();
     }, [])
+
+    async function login(email, password){
+        setLoadingAuth(true);
+        await firebase.auth().signInWithEmailAndPassword(email, password)
+        .then( async(value) => {
+            let uid = value.user.uid;
+            const userProfile = await firebase.firestore().collection('users').doc(uid).get();
+            let data = {
+                uid: uid,
+                nome: userProfile.data().nome,
+                avatarUrl: userProfile.data().avatarUrl,
+                email: value.user.email
+            };
+            setUser(data);
+            storageUser(data);
+            setLoadingAuth(false);
+
+        }).catch( (error) => {
+            alert(error);
+            setLoadingAuth(false);
+        })
+    }
 
     async function cadastrar(email, password, nome){
         setLoadingAuth(true);
@@ -62,7 +83,7 @@ function AuthProvider({ children }){
     }
 
     return(
-        <AuthContext.Provider value={{ signed: !!user, user, loading, cadastrar, logout }}>
+        <AuthContext.Provider value={{ signed: !!user, user, loading, cadastrar, logout, login, loadingAuth }}>
             { children }
         </AuthContext.Provider>
     );
