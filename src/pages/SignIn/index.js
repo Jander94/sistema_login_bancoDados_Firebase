@@ -1,6 +1,7 @@
 import { useState, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../../contexts/auth'
+import { toast } from 'react-toastify';
 import logo from '../../assets/logo.png';
 import './signin.css';
 
@@ -17,7 +18,7 @@ function SignIn() {
     if(email !== '' && password !== ''){
       login(email, password);
     }else{
-      alert('Favor preencher todos os campos!')
+      toast.warn('Favor preencher todos os dados!')
     }
   }
 
