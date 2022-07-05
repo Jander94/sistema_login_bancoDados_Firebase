@@ -1,7 +1,6 @@
 import Header from '../../components/Header';
 import Title from '../../components/Title';
 import { FiUser } from 'react-icons/fi';
-import './customers.css'
 import { useState } from 'react';
 import firebase from '../../services/firebaseConection';
 import { toast } from 'react-toastify';
@@ -62,10 +61,6 @@ export default function Customers(){
                 </div>
 
             </div>
-
-            
-            
-
         </div>
     )
 }
