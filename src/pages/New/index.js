@@ -1,20 +1,23 @@
+import './new.css';
+import firebase from "../../services/firebaseConection";
 import Header from "../../components/Header";
 import Title from "../../components/Title";
 import { FiPlusCircle } from 'react-icons/fi';
 import { useState, useEffect, useContext } from "react";
-import { AuthContext } from '../../contexts/auth'
-import firebase from "../../services/firebaseConection";
-import './new.css'
+import { AuthContext } from '../../contexts/auth';
 import { toast } from "react-toastify";
-
+import { useHistory, useParams } from 'react-router-dom';
 
 export default function New(){
 
     const { user } = useContext(AuthContext);
+    const { id } = useParams();
+    const history = useHistory();
 
     const [ assunto, setAssunto ] = useState('Suporte');
     const [ status, setStatus ] = useState('Aberto');
     const [ complemento, setComplemento ] = useState('');
+    const [ idCustomer, setIdCustomer ] = useState(false);
 
     const [ clientes, setClientes ] = useState([]);
     const [ loadClientes, setLoadClientes ] = useState(true);
@@ -38,6 +41,10 @@ export default function New(){
                 }
                 setClientes(lista);
                 setLoadClientes(false);
+                
+                if(id){
+                   loadId(lista); 
+                }
 
             }).catch( (error) => {
                 toast.error('Ops, algo deu errado...');
@@ -48,10 +55,75 @@ export default function New(){
         }
 
         loadCustomers();
-    }, []);
 
-    function handleRegister(e){
+    }, [id]);
+
+    async function loadId(lista){
+        await firebase.firestore().collection('chamados').doc(id).get()
+        .then((snapshot) => {
+            setAssunto(snapshot.data().assunto);
+            setStatus(snapshot.data().status);
+            setComplemento(snapshot.data().complemento);
+
+            let index = lista.findIndex(item => item.id === snapshot.data().clienteId);
+            setClienteSelecionado(index);
+            setIdCustomer(true);
+        })
+        .catch((error) => {
+            toast.error(' Ops, erro no ID...')
+            console.log(error)
+            setIdCustomer(false)
+        })
+    }
+
+    async function handleRegister(e){
         e.preventDefault();
+
+        if(idCustomer){
+            await firebase.firestore().collection('chamados').doc(id)
+            .update({
+                cliente: clientes[clienteSelecionado].nomeFantasia,
+                clienteId: clientes[clienteSelecionado].id,
+                assunto: assunto,
+                status: status,
+                complemento: complemento,
+                userId: user.uid
+            })
+            .then(() => {
+                toast.success('Chamado editado com sucesso!')
+                setClienteSelecionado(0);
+                setComplemento('');
+                history.push('/dashboard');
+            }).catch( (error) => {
+                toast.error('Ops, algo deu errado...')
+                console.log(error)
+            })
+
+            return;
+        }
+
+        await firebase.firestore().collection('chamados').add({
+            created: new Date(),
+            cliente: clientes[clienteSelecionado].nomeFantasia,
+            clienteId: clientes[clienteSelecionado].id,
+            assunto: assunto,
+            status: status,
+            complemento: complemento,
+            userId: user.uid
+        }).then( () => {
+            toast.success('Chamado cadastrado com sucesso!')
+            setComplemento('');
+            setClienteSelecionado(0);
+            setAssunto('Suporte');
+            setStatus('Aberto');
+            history.push('/dashboard');
+
+        }).catch( (error) => {
+            toast.error('Ops, algo deu errado...')
+            console.log(error)
+        })
+        
+
     }
 
     function handleChangeSelect(e){
@@ -78,7 +150,7 @@ export default function New(){
 
                 <div className='container-profile'>
                     <form className='form-profile' onSubmit={handleRegister}>
-                    <label>Cliente:</label>
+                        <label>Cliente:</label>
                         {loadClientes ? (
                             <input type='text' disabled value='Carregando clientes...'/>
                         ):(

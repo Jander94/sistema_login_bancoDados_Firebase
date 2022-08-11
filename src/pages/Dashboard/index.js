@@ -1,13 +1,127 @@
-import { useState } from 'react';
+import './dashboard.css';
 import Header from '../../components/Header';
-import './dashboard.css'
-import Title from '../../components/Title'
+import Title from '../../components/Title';
+import firebase from '../../services/firebaseConection';
+import Modal from '../../components/Modal';
+import { useState, useEffect } from 'react';
 import { FiMessageCircle, FiPlus, FiSearch, FiEdit2 } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
+import { format } from 'date-fns'
+import { toast } from 'react-toastify';
 
-export default function Dashboard(){
+const listRef = firebase.firestore().collection('chamados').orderBy('created', 'desc');  //ordenar por ordem 'desc' decrescente ou 'asc' crescente
 
-    const [ chamados, setChamados ] = useState([1]);
+export default function Dashboard(){    
+
+    const [ chamados, setChamados ] = useState([]);
+    const [ loading, setLoading ] = useState(true);
+    const [ loadingMore, setLoadingMore ] = useState(false);
+    const [ isEmpty, setIsEmpty ] = useState(false);
+    const [ lastDocs, setLastDocs ] = useState();
+    const [ showPostModal, setShowPostModal ] = useState(false);
+    const [ detail, setDetail ] = useState();
+
+    useEffect( () => {
+
+        async function loadChamados(){
+            await listRef.limit(4).get()
+            .then((snapshot)=>{
+                updateState(snapshot);
+            })
+            .catch((error)=>{
+                toast.error('Ops, algo deu errado...')
+                console.log("erro encontrado: ", error);
+                setLoadingMore(false)
+            })
+            setLoading(false);
+        };
+
+        loadChamados();
+
+        return () => {}
+    }, [])
+
+    
+
+    async function updateState(snapshot){
+        const isCollectionEmpty = snapshot.size === 0;
+
+        if (!isCollectionEmpty){
+            let lista = [];
+
+            snapshot.forEach((doc)=>{
+                lista.push({
+                    id: doc.id,
+                    cliente: doc.data().cliente,
+                    clienteId: doc.data().clienteId,
+                    assunto: doc.data().assunto,
+                    status: doc.data().status,
+                    created: doc.data().created,
+                    createdFormated: format(doc.data().created.toDate(), 'dd/MM/yyyy'),  //formatar a data
+                    complemento: doc.data().complemento
+                })                
+            })
+            const lastDoc = snapshot.docs[snapshot.docs.length -1]; //Pegando o ultimo documento buscado;
+            setChamados(chamados => [...chamados, ...lista]);
+            setLastDocs(lastDoc);
+        }else{
+            setIsEmpty(true);
+        }
+        setLoadingMore(false);
+    };
+
+    async function handleMore(){
+        setLoadingMore(true);
+        await listRef.startAfter(lastDocs).limit(4).get()     //começar depois da state lastDocs (ultimo item)
+        .then((snapshot) => {
+            updateState(snapshot)
+        })
+        .catch((error) => {
+            toast.error('Ops, algo deu errado...')
+            console.log(error)
+        })  
+        
+    }
+
+    function styleStatus(item){
+        if(item === 'Aberto'){
+            return(
+                {backgroundColor:'#FFA500'}
+            );
+        }else if(item === 'Em progresso'){
+            return(
+                {backgroundColor:'#B0E0E6'}
+            );
+        }else if(item === 'Atendido'){
+            return(
+                {backgroundColor:'#5cb85c'}
+            );
+        }
+    }
+
+    function togglePostModal(item){
+        setShowPostModal(!showPostModal);
+        setDetail(item);        
+    }
+
+    if(loading){
+        return(
+            <div>
+                <Header/>
+                <div className='content'>
+                    <Title name='Atendimentos'>
+                        <FiMessageCircle size={25}/>
+                    </Title>
+
+                    <div className='container-profile'>
+                        <span>Buscando Chamados...</span>
+                    </div>
+                </div>
+
+                
+            </div>
+        );
+    }
 
     return(
         <div className='d-container'>
@@ -18,7 +132,7 @@ export default function Dashboard(){
                 </Title>
 
                 {chamados.length === 0 ? (
-                    <div className='container-profile dashboard'>
+                    <div className='container-profile'>
                         <span>Nenhum chamado registrado...</span>
 
                         <Link to="/new" className='new'>
@@ -46,38 +160,52 @@ export default function Dashboard(){
                             </thead>
 
                             <tbody>
-                                <tr>
-                                    <td data-label='Cliente'>Sujeto</td>
+                                {chamados.map((item, index) => {
+                                    return(
+                                        <tr key={index}>
+                                            <td data-label='Cliente'>{item.cliente}</td>
 
-                                    <td data-label='Assunto'>Suporte</td>
+                                            <td data-label='Assunto'>{item.assunto}</td>
 
-                                    <td data-label='Status'>
-                                        <span className='badge' style={{backgroundColor: '#5cb85c'}}>Em aberto</span>
-                                    </td>
+                                            <td data-label='Status'>
+                                                <span className='badge' style={styleStatus(item.status)}>{item.status}</span>
+                                            </td>
 
-                                    <td data-label='Cadastrado'>20/06/2022</td>
+                                            <td data-label='Cadastrado'>{item.createdFormated}</td>
 
-                                    <td data-label='#' >
+                                            <td data-label='#' >
 
-                                        <button style={{backgroundColor: '#3583f6'}} className='action'>
-                                            <FiSearch color='#fff' size={17}/>
-                                        </button>
+                                                <button style={{backgroundColor: '#3583f6'}} className='action' onClick={() => togglePostModal(item)}>
+                                                    <FiSearch color='#fff' size={17}/>
+                                                </button>
 
-                                        <button style={{backgroundColor: '#f6a935'}} className='action'>
-                                            <FiEdit2 color='#fff' size={17}/>
-                                        </button>
+                                                <Link style={{backgroundColor: '#f6a935'}} className='action' to={`/new/${item.id}`}>
+                                                    <FiEdit2 color='#fff' size={17}/>
+                                                </Link>
 
-                                    </td>
-                                </tr>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
 
                                 
                             </tbody>
 
                         </table>
+                        
+                        {loadingMore && <h3 style={{textAlign: 'center', marginTop: 15}}>Buscando dados...</h3>}
+                        {!loadingMore && !isEmpty && <button className='btn-more' onClick={handleMore}>Buscar mais</button>}
                     </>
                 )}
                 
             </div>
+            {showPostModal && (
+                <Modal
+                conteudo={detail}
+                close={togglePostModal}
+                />
+            )}
         </div>
     );
+
 }
